@@ -13,7 +13,7 @@ import pyshark
 #@Campus, @Dorm, @Street, etc.
 
 # global definitions
-DEFAULT_BUFFERED_PACKETS = 5
+DEFAULT_BUFFERED_PACKETS = 2
 DEFAULT_RESULTS_FILE_NAME = 'results.csv'
 
 # command line parameters
@@ -59,6 +59,8 @@ else:
     results_file_writer.writerow(fieldnames)
     print 'Creating new output file'
 
+round = 0
+
 # Forever buffer packets and then process/print them to the csv
 while True:
     #sniff_continuously param amount of packets to collect before stopping.
@@ -66,14 +68,25 @@ while True:
 
     for packet in received_packets:
         #print 'Just arrived:', packet
+        print 'Going for round: ', round
         print packet.wlan_radio.field_names
         #print 'new packet\n\n'
         #packet.pretty_print()
-        print 'Received packet: Channel', packet.wlan_radio.channel,\
-         'On PHY', packet.wlan_radio.phy.showname
 
-        results_file_writer.writerow((packet.wlan_radio.channel,\
-                                        packet.wlan_radio.phy, packet.wlan_radio.phy.showname))
+        channel_present = False
+        
+        for name in packet.wlan_radio.field_names:
+        	if name == 'channel':
+        		channel_present = True
+
+        if channel_present:
+	        print 'Received packet: Channel', packet.wlan_radio.channel,\
+	         'On PHY', packet.wlan_radio.phy.showname
+
+	        results_file_writer.writerow((packet.wlan_radio.channel,\
+	                                        packet.wlan_radio.phy, packet.wlan_radio.phy.showname))
+
+        round += 1
 
 
 results_file.close()
