@@ -7,11 +7,16 @@ import threading
 import time
 import pyshark
 
+#Provide data on channel distribution,
+#channel sizes and PHY types (a/b/g/n/etc.)
+#Which channels are used mostly and by whom
+#@Campus, @Dorm, @Street, etc.
+
 # global definitions
 DEFAULT_BUFFERED_PACKETS = 5
 DEFAULT_RESULTS_FILE_NAME = 'results.csv'
 
-# command line paramenters
+# command line parameters
 parser = argparse.ArgumentParser(description='Capture data of intrest using Wireshark')
 parser.add_argument('-n','--nbufferred', default=DEFAULT_BUFFERED_PACKETS,type=int,
                    help='Amount of packets to buffer before processing, optional parameter')
@@ -44,7 +49,7 @@ results_file_exists = os.path.isfile(results_file_name)
 # starting with creation of a csv file with certian fieldnames
 # if the specified output file already exists do not write header
 # otherwise write the header
-fieldnames = ['dbm', 'PHY']
+fieldnames = ['Channel', 'PHY','PHY_FULL_NAME']
 results_file = open(results_file_name,"a+")
 results_file_writer = csv.writer(results_file)
 
@@ -61,14 +66,14 @@ while True:
 
     for packet in received_packets:
         #print 'Just arrived:', packet
-        #print packet.wlan.field_names
+        print packet.wlan_radio.field_names
         #print 'new packet\n\n'
         #packet.pretty_print()
-        print 'Received packet: Signal Strength dbm', packet.wlan_radio.signal_dbm,\
+        print 'Received packet: Channel', packet.wlan_radio.channel,\
          'On PHY', packet.wlan_radio.phy.showname
 
-        results_file_writer.writerow((packet.wlan_radio.signal_dbm,\
-                                        packet.wlan_radio.phy.showname))
+        results_file_writer.writerow((packet.wlan_radio.channel,\
+                                        packet.wlan_radio.phy, packet.wlan_radio.phy.showname))
 
 
 results_file.close()
