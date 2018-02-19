@@ -27,7 +27,7 @@ import pyshark
 #define PHDR_802_11_PHY_11AD 9 /* 802.11ad */
 
 # global definitions
-DEFAULT_BUFFERED_PACKETS = 5
+DEFAULT_BUFFERED_PACKETS = 2
 DEFAULT_RESULTS_FILE_NAME = 'results.csv'
 
 # command line parameters
@@ -73,6 +73,8 @@ else:
     results_file_writer.writerow(fieldnames)
     print 'Creating new output file'
 
+round = 0
+
 # Forever buffer packets and then process/print them to the csv
 while True:
     #sniff_continuously param amount of packets to collect before stopping.
@@ -80,7 +82,8 @@ while True:
 
     for packet in received_packets:
         #print 'Just arrived:', packet
-
+        print 'Going for round: ', round
+        
         # only interrested in beacon frames for PHY and channel size data.
         if(int(packet.wlan.fc_type) == 0 and int(packet.wlan.fc_subtype) == 8):
             #very dirty hack to get the correct layer
@@ -119,8 +122,20 @@ while True:
         #print 'Received packet: Channel', packet.wlan_radio.channel,\
         # 'On PHY', packet.wlan_radio.phy.showname
 
-        results_file_writer.writerow((packet.wlan_radio.channel,\
-                                        packet.wlan_radio.phy, packet.wlan_radio.phy.showname))
+        channel_present = False
+
+        for name in packet.wlan_radio.field_names:
+        	if name == 'channel':
+        		channel_present = True
+
+        if channel_present:
+	        print 'Received packet: Channel', packet.wlan_radio.channel,\
+	         'On PHY', packet.wlan_radio.phy.showname
+
+	        results_file_writer.writerow((packet.wlan_radio.channel,\
+	                                        packet.wlan_radio.phy, packet.wlan_radio.phy.showname))
+
+        round += 1
 
 
 results_file.close()
