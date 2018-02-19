@@ -28,14 +28,17 @@ import pyshark
 
 # global definitions
 DEFAULT_BUFFERED_PACKETS = 2
-DEFAULT_RESULTS_FILE_NAME = 'results.csv'
+DEFAULT_CHANNEL_RESULTS_FILE_NAME = 'channel_results.csv'
+DEFAULT_BEACON_RESULTS_FILE_NAME = 'beacon_results.csv'
 
 # command line parameters
 parser = argparse.ArgumentParser(description='Capture data of intrest using Wireshark')
 parser.add_argument('-n','--nbufferred', default=DEFAULT_BUFFERED_PACKETS,type=int,
                    help='Amount of packets to buffer before processing, optional parameter')
-parser.add_argument('-r','--result_file', default=DEFAULT_RESULTS_FILE_NAME,
-                   help='File to write the results to, default is results.csv')
+parser.add_argument('-c','--channel_results_file', default=DEFAULT_CHANNEL_RESULTS_FILE_NAME,
+                   help='File to write the channel results to, default is results.csv')
+parser.add_argument('-g','--beacon_results_file', default=DEFAULT_BEACON_RESULTS_FILE_NAME,
+                    help='File to write the beacon results to, default is results.csv')
 parser.add_argument('device', metavar='device_name',
                    help='Device to monitor on i.e. monX')
 
@@ -47,31 +50,51 @@ amount_to_buffer = DEFAULT_BUFFERED_PACKETS
 if args.nbufferred:
     amount_to_buffer = args.nbufferred
 
-results_file_name = DEFAULT_RESULTS_FILE_NAME
-if args.result_file:
-    results_file_name = args.result_file
+channel_results_file_name = DEFAULT_CHANNEL_RESULTS_FILE_NAME
+if args.channel_results_file:
+    channel_results_file_name = args.channel_results_file
+
+beacon_results_file_name = DEFAULT_BEACON_RESULTS_FILE_NAME
+if args.beacon_results_file:
+    beacon_results_file_name = args.beacon_results_file
 
 # Starting of program
 print 'Started sniffing on', interface
 
 # wireshark capturing
 capture = pyshark.LiveCapture(interface=interface)
-#capture.sniff(timeout=5)
 
-results_file_exists = os.path.isfile(results_file_name)
+# get the filesready
+channel_results_file_exists = os.path.isfile(channel_results_file_name)
 
 # starting with creation of a csv file with certian fieldnames
 # if the specified output file already exists do not write header
 # otherwise write the header
-fieldnames = ['Channel', 'PHY','PHY_FULL_NAME']
-results_file = open(results_file_name,"a+")
-results_file_writer = csv.writer(results_file)
+channel_fieldnames = ['Channel', 'Transmitter_Adress','PHY', 'Frame_Type','Frame_Subtype']
+channel_results_file = open(channel_results_file_name,"a+")
+channel_results_file_writer = csv.writer(channel_results_file)
 
-if results_file_exists:
-    print 'Appending to pre-existing output file'
+if channel_results_file_exists:
+    print 'Appending to pre-existing channel output file'
 else:
-    results_file_writer.writerow(fieldnames)
-    print 'Creating new output file'
+    channel_results_file_writer.writerow(channel_fieldnames)
+    print 'Creating new channel output file'
+
+beacon_results_file_exists = os.path.isfile(beacon_results_file_name)
+
+# starting with creation of a csv file with certian fieldnames
+# if the specified output file already exists do not write header
+# otherwise write the header
+beacon_fieldnames = ['Channel', 'is_5Ghz','SSID','Transmitter_Adress','Channel_Width','PHY_Type']
+beacon_results_file = open(beacon_results_file_name,"a+")
+beacon_results_file_writer = csv.writer(beacon_results_file)
+
+if beacon_results_file_exists:
+    print 'Appending to pre-existing beacon output file'
+else:
+    beacon_results_file_writer.writerow(beacon_fieldnames)
+    print 'Creating new beacon output file'
+
 
 round = 0
 
@@ -81,9 +104,6 @@ while True:
     received_packets = capture.sniff_continuously(packet_count=amount_to_buffer)
 
     for packet in received_packets:
-        #print 'Just arrived:', packet
-        print 'Going for round: ', round
-        
         # only interrested in beacon frames for PHY and channel size data.
         if(int(packet.wlan.fc_type) == 0 and int(packet.wlan.fc_subtype) == 8):
             #very dirty hack to get the correct layer
@@ -96,8 +116,20 @@ while True:
                 #Tagged Parameters / Tag: HT Capabilities (802.11n D1.10) / HT Capabilities Info".
                 #If the second bit is equal to 1, this would mean that the AP transmitter supports
                 # both 20MHz and 40MHz operations.
+
                 if(hasattr(packet.layers[3], 'vht_op_channelwidth')):
-                    print '802.11ac', packet.layers[3].vht_op_channelwidth.showname
+                    width = re.findall('\d+', packet.layers[3].vht_op_channelwidth.showname_value)
+                    if(int(width[0]) == 20 and int(width[1]) == 40):
+                        width = '20 or 40'
+                    else:
+                        width = width[0]
+                    print '802.11ac', width, 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
+                    beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                        packet.radiotap.channel_flags_5ghz,\
+                        packet.layers[3].ssid,\
+                        packet.wlan.ta,\
+                        width,\
+                        8))
 
                 #For VHT (Very High Throughput or 802.11ac), you can also find the information
                 #in the beacon frame under "IEEE 802.11 Wireless LAN management frame /
@@ -105,22 +137,53 @@ while True:
                 #You should see a field named: Channel Width.
                 elif(hasattr(packet.layers[3], 'ht_capabilities_width')):
                     if(int(packet.layers[3].ht_capabilities_width) == 1):
-                        print '802.11n 40mhz'
+                        print '802.11n 40', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
+                        beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                            packet.radiotap.channel_flags_5ghz,\
+                            packet.layers[3].ssid,\
+                            packet.wlan.ta,\
+                            40,\
+                            7))
                     else:
-                        print '802.11n 20mhz'
+                        print '802.11n 20', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
+                        beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                            packet.radiotap.channel_flags_5ghz,\
+                            packet.layers[3].ssid,\
+                            packet.wlan.ta,\
+                            20,\
+                            7))
                 else:
+                    # If not n on 5ghz then it must be a 802.11a router
                     if(int(packet.radiotap.channel_flags_5ghz) == 1):
-                         print '802.11a 20mhz' #a router
+                        print '802.11a 20', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
+                        beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                            packet.radiotap.channel_flags_5ghz,\
+                            packet.layers[3].ssid,\
+                            packet.wlan.ta,\
+                            20,\
+                            5))
                     elif(int(packet.radiotap.channel_flags_2ghz) == 1):
-                        #todo differentiate b and g routers this below does not work
-                        # erp element?
-                        if(int(packet.wlan_radio.phy) == 6):
-                            print '802.11g' #g router
-                        elif (int(packet.wlan_radio.phy) == 4):
-                             print '802.11b' #b router
+                        # https://mrncciew.com/2014/10/08/802-11-mgmt-beacon-frame/
+                        # ERP element is present only on 2.4GHz network supporting
+                        # 802.11g & it is present in beacon & probe responses.
 
-        #print 'Received packet: Channel', packet.wlan_radio.channel,\
-        # 'On PHY', packet.wlan_radio.phy.showname
+                        # only g+ has ERP element
+                        if(hasattr(packet.layers[3], 'erp_info')):
+                            print '802.11g', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
+                            beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                                packet.radiotap.channel_flags_5ghz,\
+                                packet.layers[3].ssid,\
+                                packet.wlan.ta,\
+                                20,\
+                                6))
+                        else:
+                            print '802.11b', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
+                            beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                                packet.radiotap.channel_flags_5ghz,\
+                                packet.layers[3].ssid,\
+                                packet.wlan.ta,\
+                                20,\
+                                4))
 
         channel_present = False
 
@@ -129,13 +192,14 @@ while True:
         		channel_present = True
 
         if channel_present:
-	        print 'Received packet: Channel', packet.wlan_radio.channel,\
-	         'On PHY', packet.wlan_radio.phy.showname
-
-	        results_file_writer.writerow((packet.wlan_radio.channel,\
-	                                        packet.wlan_radio.phy, packet.wlan_radio.phy.showname))
+	        channel_results_file_writer.writerow((packet.wlan_radio.channel,\
+                                            packet.wlan.ta,\
+                                            packet.wlan_radio.phy,\
+                                            packet.wlan.fc_type,\
+                                            packet.wlan.fc_subtype))
 
         round += 1
 
 
-results_file.close()
+channel_results_file.close()
+beacon_results_file.close()
