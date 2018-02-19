@@ -110,13 +110,10 @@ while True:
             # packet object contains two attibutes named wlan.......
             #[<RADIOTAP Layer>, <WLAN_RADIO Layer>, <WLAN Layer>, <WLAN Layer>]
             if(len(packet.layers) == 4):
-                # https://www.semfionetworks.com/blog/wireshark-how-to-check-if-a-data-frame-is-sent-using-80211n
-                #For HT (High Throughput or 802.11n), you can find the information in the
-                #beacon frame under "IEEE 802.11 Wireless LAN management frame /
-                #Tagged Parameters / Tag: HT Capabilities (802.11n D1.10) / HT Capabilities Info".
-                #If the second bit is equal to 1, this would mean that the AP transmitter supports
-                # both 20MHz and 40MHz operations.
-
+                #For VHT (Very High Throughput or 802.11ac), you can also find the information
+                #in the beacon frame under "IEEE 802.11 Wireless LAN management frame /
+                #Tagged Parameters / Tag: VHT Operations (IEEE Std. 802.11ac/D3.1) / VHT Operation Info".
+                #You should see a field named: Channel Width.
                 if(hasattr(packet.layers[3], 'vht_op_channelwidth')):
                     width = re.findall('\d+', packet.layers[3].vht_op_channelwidth.showname_value)
                     if(int(width[0]) == 20 and int(width[1]) == 40):
@@ -131,10 +128,12 @@ while True:
                         width,\
                         8))
 
-                #For VHT (Very High Throughput or 802.11ac), you can also find the information
-                #in the beacon frame under "IEEE 802.11 Wireless LAN management frame /
-                #Tagged Parameters / Tag: VHT Operations (IEEE Std. 802.11ac/D3.1) / VHT Operation Info".
-                #You should see a field named: Channel Width.
+                # https://www.semfionetworks.com/blog/wireshark-how-to-check-if-a-data-frame-is-sent-using-80211n
+                #For HT (High Throughput or 802.11n), you can find the information in the
+                #beacon frame under "IEEE 802.11 Wireless LAN management frame /
+                #Tagged Parameters / Tag: HT Capabilities (802.11n D1.10) / HT Capabilities Info".
+                #If the second bit is equal to 1, this would mean that the AP transmitter supports
+                # both 20MHz and 40MHz operations.
                 elif(hasattr(packet.layers[3], 'ht_capabilities_width')):
                     if(int(packet.layers[3].ht_capabilities_width) == 1):
                         print '802.11n 40', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
