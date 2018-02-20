@@ -184,18 +184,14 @@ while True:
                                 20,\
                                 4))
 
-        channel_present = False
-
-        for name in packet.wlan_radio.field_names:
-        	if name == 'channel':
-        		channel_present = True
-
-        if channel_present:
-	        channel_results_file_writer.writerow((packet.wlan_radio.channel,\
-                                            packet.wlan.ta,\
-                                            packet.wlan_radio.phy,\
-                                            packet.wlan.fc_type,\
-                                            packet.wlan.fc_subtype))
+        if(hasattr(packet,'wlan_radio') and hasattr(packet,'wlan')):
+            if(hasattr(packet.wlan_radio, 'channel') and \
+                hasattr(packet.wlan, 'ta')):
+                channel_results_file_writer.writerow((packet.wlan_radio.channel,\
+                                                    packet.wlan.ta,\
+                                                    packet.wlan_radio.phy,\
+                                                    packet.wlan.fc_type,\
+                                                    packet.wlan.fc_subtype))
 
         round += 1
 
