@@ -64,7 +64,7 @@ channel_results_file_exists = os.path.isfile(channel_results_file_name)
 # starting with creation of a csv file with certian fieldnames
 # if the specified output file already exists do not write header
 # otherwise write the header
-channel_fieldnames = ['Channel', 'Transmitter_Adress','PHY', 'Frame_Type','Frame_Subtype']
+channel_fieldnames = ['Transmitter_Adress','Channel','PHY', 'Frame_Type','Frame_Subtype']
 channel_results_file = open(channel_results_file_name,"a+")
 channel_results_file_writer = csv.writer(channel_results_file)
 
@@ -183,8 +183,8 @@ for packet in received_packets:
     if(hasattr(packet,'wlan_radio') and hasattr(packet,'wlan')):
         if(hasattr(packet.wlan_radio, 'channel') and \
             hasattr(packet.wlan, 'ta')):
-            channel_results_file_writer.writerow((packet.wlan_radio.channel,\
-                                                packet.wlan.ta,\
+            channel_results_file_writer.writerow((packet.wlan.ta,\
+						packet.wlan_radio.channel,\
                                                 packet.wlan_radio.phy,\
                                                 packet.wlan.fc_type,\
                                                 packet.wlan.fc_subtype))
