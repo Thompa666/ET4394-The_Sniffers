@@ -79,7 +79,7 @@ beacon_results_file_exists = os.path.isfile(beacon_results_file_name)
 # starting with creation of a csv file with certian fieldnames
 # if the specified output file already exists do not write header
 # otherwise write the header
-beacon_fieldnames = ['Channel', 'is_5Ghz','SSID','Transmitter_Adress','Channel_Width','PHY_Type']
+beacon_fieldnames = ['Transmitter_Adress','Channel', 'is_5Ghz','SSID','Channel_Width','PHY_Type']
 beacon_results_file = open(beacon_results_file_name,"a+")
 beacon_results_file_writer = csv.writer(beacon_results_file)
 
@@ -117,10 +117,10 @@ for packet in received_packets:
                 else:
                     width = width[0]
                 print '802.11ac', width, 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
-                beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                beacon_results_file_writer.writerow((packet.wlan.ta,\
+                    packet.wlan_radio.channel,\
                     packet.radiotap.channel_flags_5ghz,\
                     packet.layers[3].ssid,\
-                    packet.wlan.ta,\
                     width,\
                     8))
 
@@ -133,28 +133,28 @@ for packet in received_packets:
             elif(hasattr(packet.layers[3], 'ht_capabilities_width')):
                 if(int(packet.layers[3].ht_capabilities_width) == 1):
                     print '802.11n 40', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
-                    beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                    beacon_results_file_writer.writerow((packet.wlan.ta,\
+                        packet.wlan_radio.channel,\
                         packet.radiotap.channel_flags_5ghz,\
                         packet.layers[3].ssid,\
-                        packet.wlan.ta,\
                         40,\
                         7))
                 else:
                     print '802.11n 20', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
-                    beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                    beacon_results_file_writer.writerow((packet.wlan.ta,\
+                        packet.wlan_radio.channel,\
                         packet.radiotap.channel_flags_5ghz,\
                         packet.layers[3].ssid,\
-                        packet.wlan.ta,\
                         20,\
                         7))
             else:
                 # If not n on 5ghz then it must be a 802.11a router
                 if(int(packet.radiotap.channel_flags_5ghz) == 1):
                     print '802.11a 20', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
-                    beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                    beacon_results_file_writer.writerow((packet.wlan.ta,\
+                        packet.wlan_radio.channel,\
                         packet.radiotap.channel_flags_5ghz,\
                         packet.layers[3].ssid,\
-                        packet.wlan.ta,\
                         20,\
                         5))
                 elif(int(packet.radiotap.channel_flags_2ghz) == 1):
@@ -165,18 +165,18 @@ for packet in received_packets:
                     # only g+ has ERP element
                     if(hasattr(packet.layers[3], 'erp_info')):
                         print '802.11g', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
-                        beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                        beacon_results_file_writer.writerow((packet.wlan.ta,\
+                            packet.wlan_radio.channel,\
                             packet.radiotap.channel_flags_5ghz,\
                             packet.layers[3].ssid,\
-                            packet.wlan.ta,\
                             20,\
                             6))
                     else:
                         print '802.11b', 'SSID:', packet.layers[3].ssid, 'transmitter:', packet.wlan.ta
-                        beacon_results_file_writer.writerow((packet.wlan_radio.channel,\
+                        beacon_results_file_writer.writerow((packet.wlan.ta,\
+                            packet.wlan_radio.channel,\
                             packet.radiotap.channel_flags_5ghz,\
                             packet.layers[3].ssid,\
-                            packet.wlan.ta,\
                             20,\
                             4))
 
