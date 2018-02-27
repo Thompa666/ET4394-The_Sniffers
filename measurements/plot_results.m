@@ -4,6 +4,7 @@
 
 % Read the CSV data in matrix, note the row and column offset
 M = csvread("wsn_lecture-1dot75h_21_2_2018-channel_results_chanphy.csv",1,0);
+
 %% Import router phy
 % Before reading beacon file for phy usage into matlab, first stripp all unneccesary columns:
 % cut -d , -f 4,6 beacon_input.csv > beacon_input_phytrans.csv
